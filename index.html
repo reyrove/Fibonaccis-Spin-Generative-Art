@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Fibonacci's Spin</title>
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="fav.svg">
+  
+  <!-- Preload GIFs for faster loading -->
+  <link rel="preload" as="image" href="purple-golden-lines.gif">
+  <link rel="preload" as="image" href="cyan-golden-ellipses.gif">
+  
+  <style>
+    /* --- perfect reset --- */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      background: #0a0a0a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+    }
+    
+    #main-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      padding: 20px;
+      gap: 8px;
+    }
+    
+    /* --- title (center top) --- */
+    .title-bar {
+      text-align: center;
+      flex-shrink: 0;
+      padding: 2px 0;
+      width: 100%;
+    }
+    .title-bar .title {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 8px;
+      color: rgba(255,255,255,0.85);
+      text-transform: uppercase;
+    }
+    .title-bar .title .accent {
+      color: #c9a84c;
+      font-weight: 400;
+    }
+    
+    /* --- canvas container (image holder) --- */
+    #canvas-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 0;
+      padding: 0 10px;
+      position: relative;
+      background: #0a0a0a;
+    }
+    
+    /* --- image wrapper to maintain consistent aspect ratio --- */
+    .image-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      aspect-ratio: 1 / 1;
+      max-height: 100%;
+    }
+    
+    /* --- Loading Spinner for GIFs --- */
+    .loading-spinner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(201,168,76,0.1);
+      border-top: 3px solid #c9a84c;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+      z-index: 10;
+      pointer-events: none;
+    }
+    
+    .loading-spinner.active {
+      display: block;
+    }
+    
+    @keyframes spin {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    
+    #slide-image {
+      display: block;
+      box-shadow: 0 0 80px rgba(0,0,0,0.9);
+      image-rendering: auto;
+      touch-action: none;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 2px;
+      transition: opacity 0.5s ease, transform 0.5s ease, box-shadow 0.5s ease, border 0.5s ease;
+      opacity: 1;
+      border: none;
+      position: relative;
+      z-index: 1;
+    }
+    
+    #slide-image.fade {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    
+    #slide-image.loading {
+      opacity: 0.3;
+    }
+    
+    /* --- SHIRT MOCKUP --- */
+    #shirt-mockup {
+      display: none;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 2px;
+      box-shadow: 0 0 80px rgba(0,0,0,0.9);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      position: relative;
+      z-index: 1;
+    }
+    #shirt-mockup.active {
+      display: block;
+      animation: fadeIn 0.6s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    
+    /* --- bottom bar --- */
+    .bottom-bar {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .controls {
+      color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.04);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: all 0.3s ease;
+      letter-spacing: 0.8px;
+      touch-action: manipulation;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .controls:hover {
+      color: rgba(255,255,255,0.95);
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+    }
+    .controls:active {
+      transform: scale(0.95);
+    }
+    .controls .key {
+      color: rgba(255,255,255,0.5);
+      font-weight: 300;
+    }
+    .controls .sep {
+      color: rgba(255,255,255,0.15);
+      margin: 0 4px;
+    }
+    
+    /* --- shirt/apparel button (gold) --- */
+    .controls.shirt-btn {
+      border-color: rgba(201, 168, 76, 0.2);
+      color: rgba(201, 168, 76, 0.7);
+      letter-spacing: 1px;
+    }
+    .controls.shirt-btn:hover {
+      border-color: rgba(201, 168, 76, 0.4);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.06);
+    }
+    .controls.shirt-btn.active {
+      border-color: rgba(201, 168, 76, 0.5);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.08);
+    }
+    .controls.shirt-btn .icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    /* --- STORY BUTTON (Gold, matches apparel) --- */
+    .story-btn {
+      border-color: rgba(201, 168, 76, 0.15);
+      color: rgba(201, 168, 76, 0.6);
+      letter-spacing: 1px;
+      background: rgba(201, 168, 76, 0.03);
+    }
+    .story-btn:hover {
+      border-color: rgba(201, 168, 76, 0.3);
+      color: #c9a84c;
+      background: rgba(201, 168, 76, 0.06);
+    }
+    .story-btn .icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    
+    /* --- info row --- */
+    .info-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      color: rgba(255,255,255,0.3);
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      flex-wrap: wrap;
+      padding: 2px 0;
+    }
+    .info-row .info-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
+    }
+    .info-row .label {
+      color: rgba(255,255,255,0.25);
+      font-weight: 300;
+    }
+    .info-row .value {
+      color: rgba(255,255,255,0.6);
+      font-weight: 400;
+    }
+    
+    /* --- description --- */
+    .description {
+      display: block;
+      text-align: center;
+      color: rgba(255,255,255,0.25);
+      font-size: 8px;
+      letter-spacing: 1.2px;
+      line-height: 1.8;
+      padding: 2px 10px;
+      font-weight: 300;
+      max-width: 500px;
+      width: 100%;
+      text-transform: uppercase;
+    }
+    .description .highlight {
+      color: rgba(255,255,255,0.4);
+    }
+    .description .sep {
+      color: rgba(255,255,255,0.08);
+      margin: 0 4px;
+    }
+    
+    /* ============================================
+       MODAL STYLES
+    ============================================ */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .modal-overlay.open {
+      display: flex;
+      opacity: 1;
+    }
+    
+    .modal-content {
+      max-width: 700px;
+      width: 100%;
+      max-height: 80vh;
+      background: rgba(20,20,20,0.95);
+      border-radius: 20px;
+      padding: 40px 40px 30px;
+      border: 1px solid rgba(201,168,76,0.15);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 80px rgba(201,168,76,0.05);
+      position: relative;
+      transform: scale(0.95) translateY(20px);
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow-y: auto;
+    }
+    
+    .modal-overlay.open .modal-content {
+      transform: scale(1) translateY(0);
+    }
+    
+    /* Modal scrollbar styling */
+    .modal-content::-webkit-scrollbar {
+      width: 3px;
+    }
+    .modal-content::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+    }
+    .modal-content::-webkit-scrollbar-thumb {
+      background: rgba(201,168,76,0.3);
+      border-radius: 10px;
+    }
+    .modal-content::-webkit-scrollbar-thumb:hover {
+      background: rgba(201,168,76,0.5);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .modal-title {
+      color: #c9a84c;
+      font-size: 16px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    
+    .modal-title .work-number {
+      color: rgba(255,255,255,0.2);
+      font-size: 11px;
+      letter-spacing: 1px;
+      margin-left: 8px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      font-size: 28px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .modal-close:hover {
+      color: #c9a84c;
+      transform: rotate(90deg);
+    }
+    
+    .modal-body {
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      line-height: 2.2;
+      letter-spacing: 0.5px;
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      padding: 4px 0;
+    }
+    
+    .modal-body .quote-start,
+    .modal-body .quote-end {
+      color: rgba(201,168,76,0.25);
+      font-size: 28px;
+      font-family: 'Georgia', serif;
+      line-height: 0;
+      display: inline-block;
+    }
+    .modal-body .quote-start {
+      margin-right: 6px;
+    }
+    .modal-body .quote-end {
+      margin-left: 6px;
+    }
+    
+    .modal-footer {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: rgba(255,255,255,0.15);
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    
+    .modal-footer .dots {
+      color: rgba(201,168,76,0.2);
+      letter-spacing: 4px;
+    }
+    
+    /* --- responsive modal --- */
+    @media (max-width: 768px) {
+      .modal-content {
+        padding: 30px 25px 25px;
+        max-width: 90%;
+      }
+      .modal-title {
+        font-size: 14px;
+      }
+      .modal-body {
+        font-size: 12px;
+        line-height: 2;
+      }
+      .modal-body .quote-start,
+      .modal-body .quote-end {
+        font-size: 22px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .modal-content {
+        padding: 25px 20px 20px;
+        border-radius: 16px;
+        max-width: 95%;
+        max-height: 85vh;
+      }
+      .modal-title {
+        font-size: 12px;
+        letter-spacing: 2px;
+      }
+      .modal-body {
+        font-size: 11px;
+        line-height: 1.9;
+      }
+      .modal-body .quote-start,
+      .modal-body .quote-end {
+        font-size: 18px;
+      }
+      .modal-close {
+        font-size: 22px;
+      }
+    }
+    
+    /* --- responsive base --- */
+    @media (max-width: 1024px) {
+      #main-container { padding: 16px; gap: 6px; }
+      .title-bar .title { font-size: 20px; letter-spacing: 6px; }
+      .controls { font-size: 10px; padding: 7px 16px; min-height: 34px; }
+      .info-row { font-size: 8.5px; gap: 12px; }
+      .info-row .info-item { padding: 2px 10px; }
+      .description { font-size: 7.5px; letter-spacing: 1px; }
+    }
+    @media (max-width: 768px) {
+      #main-container { padding: 12px; gap: 5px; }
+      .title-bar .title { font-size: 17px; letter-spacing: 5px; }
+      #canvas-container { padding: 0 6px; }
+      .controls { font-size: 9px; padding: 6px 14px; min-height: 32px; letter-spacing: 0.6px; }
+      .controls-row { gap: 6px; }
+      .info-row { font-size: 8px; gap: 10px; }
+      .info-row .info-item { padding: 2px 8px; }
+      .description { font-size: 7px; letter-spacing: 0.8px; padding: 2px 6px; }
+      .controls.shirt-btn .icon { font-size: 12px; }
+      .story-btn .icon { font-size: 12px; }
+    }
+    @media (max-width: 480px) {
+      #main-container { padding: 8px; gap: 4px; }
+      .title-bar .title { font-size: 14px; letter-spacing: 4px; }
+      #canvas-container { padding: 0 4px; }
+      .controls { font-size: 8px; padding: 5px 12px; min-height: 28px; border-radius: 24px; letter-spacing: 0.4px; }
+      .controls-row { gap: 4px; }
+      .info-row { font-size: 7px; gap: 8px; }
+      .info-row .info-item { padding: 2px 6px; gap: 4px; }
+      .description { font-size: 6.5px; letter-spacing: 0.6px; padding: 2px 4px; line-height: 1.6; }
+      .controls.shirt-btn .icon { font-size: 11px; }
+      .story-btn .icon { font-size: 11px; }
+    }
+    @media (max-width: 380px) {
+      #main-container { padding: 6px; gap: 3px; }
+      .title-bar .title { font-size: 12px; letter-spacing: 3px; }
+      #canvas-container { padding: 0 2px; }
+      .controls { font-size: 7px; padding: 4px 10px; min-height: 26px; border-radius: 20px; }
+      .info-row { font-size: 6.5px; gap: 6px; }
+      .info-row .info-item { padding: 1px 5px; border-radius: 14px; }
+      .description { font-size: 6px; letter-spacing: 0.5px; padding: 1px 3px; }
+      .controls.shirt-btn .icon { font-size: 10px; }
+      .story-btn .icon { font-size: 10px; }
+    }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #main-container { padding: 10px 20px; gap: 4px; flex-direction: row; flex-wrap: wrap; }
+      .title-bar { width: 100%; flex-shrink: 0; }
+      .title-bar .title { font-size: 16px; letter-spacing: 4px; }
+      #canvas-container { flex: 1; min-height: 0; height: 100%; padding: 0 8px; }
+      .image-wrapper { aspect-ratio: auto; height: 100%; width: auto; }
+      .bottom-bar { width: auto; max-width: 180px; flex-shrink: 0; gap: 4px; padding: 0 4px; }
+      .controls { font-size: 8px; padding: 5px 12px; min-height: 28px; letter-spacing: 0.4px; }
+      .controls-row { flex-direction: column; gap: 4px; }
+      .info-row { font-size: 7px; gap: 6px; flex-direction: column; align-items: stretch; }
+      .info-row .info-item { padding: 2px 8px; justify-content: center; }
+      .description { font-size: 6px; max-width: 160px; padding: 1px 4px; line-height: 1.4; letter-spacing: 0.5px; }
+    }
+    @media (orientation: landscape) and (max-height: 380px) {
+      #main-container { padding: 6px 12px; gap: 3px; }
+      .title-bar .title { font-size: 13px; letter-spacing: 3px; }
+      #canvas-container { padding: 0 4px; }
+      .bottom-bar { max-width: 140px; gap: 3px; }
+      .controls { font-size: 7px; padding: 4px 10px; min-height: 24px; border-radius: 16px; }
+      .info-row { font-size: 6px; gap: 4px; }
+      .info-row .info-item { padding: 1px 6px; }
+      .description { font-size: 5.5px; max-width: 120px; padding: 1px 3px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .controls, #slide-image, .modal-overlay, .modal-content { transition: none; }
+      #slide-image.fade { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+<div id="main-container">
+  <!-- TITLE -->
+  <div class="title-bar">
+    <div class="title"><span class="accent">Fibonacci's</span> Spin</div>
+  </div>
+
+  <!-- IMAGE CONTAINER -->
+  <div id="canvas-container">
+    <div class="image-wrapper">
+      <div class="loading-spinner" id="loadingSpinner"></div>
+      <img id="slide-image" src="" alt="p5.js artwork">
+      <img id="shirt-mockup" src="Fibonaccis-Spin.jpg" alt="Fibonacci's Spin on T-Shirt" />
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar">
+    <!-- CONTROLS ROW -->
+    <div class="controls-row">
+      <div class="controls" id="controlsBar">
+        <span class="key">●</span> next work <span class="sep">—</span> <span class="key">S</span> save
+      </div>
+      <div class="controls shirt-btn" id="shirtToggle">
+        <span class="icon">◷</span> apparel
+      </div>
+      <div class="controls story-btn" id="storyBtn">
+        <span class="icon">✧</span> story
+      </div>
+    </div>
+
+    <!-- INFO ROW -->
+    <div class="info-row">
+      <div class="info-item">
+        <span class="label">work</span>
+        <span class="value" id="workName">Purple Golden Lines</span>
+      </div>
+      <div class="info-item">
+        <span class="label">#</span>
+        <span class="value" id="workIndex">1 / 2</span>
+      </div>
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="description">
+      <span class="highlight">fibonacci art</span>
+      <span class="sep">·</span>
+      <span class="highlight">p5.js</span>
+      <span class="sep">·</span>
+      <span class="highlight">2 works</span>
+      <span class="sep">·</span>
+      <span class="highlight">animated</span>
+      <span class="sep">·</span>
+      <span class="highlight">with stories</span>
+      <span class="sep">·</span>
+      <span class="highlight">apparel ready</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     MODAL
+============================================ -->
+<div class="modal-overlay" id="storyModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <span id="modalWorkName">Purple Golden Lines</span>
+        <span class="work-number" id="modalWorkNumber">I</span>
+      </div>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <span class="quote-start">"</span>
+      <span id="modalStoryText">Loading story...</span>
+      <span class="quote-end">"</span>
+    </div>
+    <div class="modal-footer">
+      <span>✦ fibonacci's spin</span>
+      <span class="dots">···</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // --- LIST OF 2 IMAGES WITH FULL STORIES ---
+    const works = [
+      { 
+        name: 'Purple Golden Lines', 
+        file: 'purple-golden-lines.gif',
+        isGif: true,
+        story: 'In the graceful rotation of the Fibonacci sequence, where each number holds its place in the symphony of mathematics, there lies a sentimental journey woven with threads of nostalgia and wonder. Like the petals of a delicate flower unfolding under the soft light of dawn, the sequence blooms with hues of purple, casting a mesmerizing spell that transcends time and space. As each digit cascades into the next, a story unfolds—a story of growth, of patterns repeating, of nature\'s intricate design. From the humble beginnings of 1, 1, the sequence spirals outward, guided by the rhythm of 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, and 233. Each number a testament to the beauty found in simplicity, each rotation a dance of cosmic proportions. Within the embrace of the Fibonacci sequence, sentiments of awe and reverence intertwine, echoing the whispers of generations past who marveled at the elegance of these mathematical marvels. And amidst the infinite expanse of numbers, there lies a sense of connection—a reminder that even in the vastness of the universe, there exists a sense of order, a sense of purpose, a sense of beauty embodied in the delicate rotation of a sequence as timeless as it is profound. Made by p5.js. For the beginning of the lines, I used a model of a four-link mechanism, and for the end of the lines, I used a model of a three-link mechanism, where the length of the links is determined based on the Fibonacci sequence.'
+      },
+      { 
+        name: 'Cyan Golden Ellipses', 
+        file: 'cyan-golden-ellipses.gif',
+        isGif: true,
+        story: 'Fifty-five cerulean ellipses, drawn by the digital brushstrokes of p5.js, pirouette in a mesmerizing dance across the canvas. Each frame, meticulously crafted at 31 frames per second, unveils a symphony of mathematics and aesthetics, choreographed by lines of code. Imagine the ellipses as notes on a digital score, their sizes cascading in perfect harmony – a testament to the Fibonacci sequence, echoed in nature\'s hidden melody. The largest, a majestic queen, completes its orbit in a mesmerizing 3.22 seconds, while the smallest, a nimble sprite, whisks through its journey in a fleeting 0.1 seconds. These digital brushstrokes resonate with the natural world, mirroring the sunflower\'s 21 spirals and the daisy\'s 34 petals, weaving a tapestry of interconnected beauty. But the magic lies not just in the visuals. Invisible algorithms, written in p5.js, govern their dance, their positions calculated with every frame based on the golden ratio\'s divine proportions. Imagine intricate equations transforming into graceful movements, each ellipse tracing a precise orbit dictated by the Fibonacci sequence. It\'s a ballet where mathematics paints beauty across the digital canvas, where numbers breathe life into pixels, and code transforms into a captivating spectacle. So, close your eyes and surrender to the digital ballet. Witness the 55 dancers, their movements bathed in the warm glow of the screen, a testament to the hidden harmony that governs the digital realm. In their precise choreography, orchestrated by p5.js, find a glimpse of the mesmerizing interplay between mathematics and aesthetics, where the elegance of numbers dances hand-in-hand with the beauty of digital art. Immerse yourself in this dreamscape, where every detail unfolds with purpose, a breathtaking display of code, math, and artistic vision. Let your imagination waltz alongside the ellipses, carried by the rhythm of the Fibonacci sequence, and lose yourself in the captivating beauty painted in a mesmerizing 31 frames per second.'
+      }
+    ];
+
+    // Roman numerals for chapter display
+    const romanNumerals = ['I', 'II'];
+
+    // --- state ---
+    let currentIndex = 0;
+    let apparelMode = false;
+    let isLoading = false;
+    
+    const imgElement = document.getElementById('slide-image');
+    const shirtMockup = document.getElementById('shirt-mockup');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const workNameSpan = document.getElementById('workName');
+    const workIndexSpan = document.getElementById('workIndex');
+    const controlsBar = document.getElementById('controlsBar');
+    const shirtToggle = document.getElementById('shirtToggle');
+    const storyBtn = document.getElementById('storyBtn');
+
+    // Modal elements
+    const modalOverlay = document.getElementById('storyModal');
+    const modalClose = document.getElementById('modalClose');
+    const modalWorkName = document.getElementById('modalWorkName');
+    const modalWorkNumber = document.getElementById('modalWorkNumber');
+    const modalStoryText = document.getElementById('modalStoryText');
+
+    // --- load image with fade and loading spinner ---
+    function loadImage(index) {
+      if (isLoading) return;
+      if (index >= works.length) index = 0;
+      if (index < 0) index = works.length - 1;
+      currentIndex = index;
+
+      const work = works[currentIndex];
+      
+      // If apparel mode is on, switch back to artwork
+      if (apparelMode) {
+        toggleApparel();
+      }
+      
+      // Show loading spinner for GIFs
+      if (work.isGif) {
+        loadingSpinner.classList.add('active');
+        imgElement.classList.add('loading');
+        isLoading = true;
+      }
+      
+      // Fade image
+      imgElement.classList.add('fade');
+
+      setTimeout(() => {
+        // Set the image source
+        imgElement.src = work.file;
+        imgElement.alt = work.name;
+        workNameSpan.textContent = work.name;
+        workIndexSpan.textContent = (currentIndex + 1) + ' / ' + works.length;
+        
+        // Update modal content (so it's ready when opened)
+        modalWorkName.textContent = work.name;
+        modalWorkNumber.textContent = romanNumerals[currentIndex] || (currentIndex + 1);
+        modalStoryText.textContent = work.story;
+        
+        // For GIFs, wait for load event
+        if (work.isGif) {
+          imgElement.onload = function() {
+            loadingSpinner.classList.remove('active');
+            imgElement.classList.remove('loading');
+            imgElement.classList.remove('fade');
+            isLoading = false;
+          };
+          // Fallback: if GIF doesn't trigger onload, hide spinner after 3 seconds
+          setTimeout(function() {
+            if (isLoading) {
+              loadingSpinner.classList.remove('active');
+              imgElement.classList.remove('loading');
+              imgElement.classList.remove('fade');
+              isLoading = false;
+            }
+          }, 3000);
+        } else {
+          // For static images, just fade in
+          setTimeout(() => {
+            imgElement.classList.remove('fade');
+          }, 100);
+        }
+      }, 300);
+    }
+
+    // --- next / prev ---
+    function nextWork() {
+      if (isLoading) return;
+      const nextIndex = (currentIndex + 1) % works.length;
+      loadImage(nextIndex);
+    }
+    function prevWork() {
+      if (isLoading) return;
+      const prevIndex = (currentIndex - 1 + works.length) % works.length;
+      loadImage(prevIndex);
+    }
+
+    // --- save current image ---
+    function saveImage() {
+      const work = works[currentIndex];
+      const link = document.createElement('a');
+      
+      if (apparelMode) {
+        link.href = shirtMockup.src;
+        const filename = 'Fibonaccis_Spin_Apparel.jpg';
+        link.download = filename;
+      } else {
+        link.href = imgElement.src;
+        const filename = 'Fibonaccis_Spin_' + work.name.replace(/\s+/g, '_') + (work.isGif ? '.gif' : '.jpg');
+        link.download = filename;
+      }
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // --- toggle apparel ---
+    function toggleApparel() {
+      apparelMode = !apparelMode;
+      
+      if (apparelMode) {
+        // Show mockup, hide artwork
+        imgElement.style.display = 'none';
+        shirtMockup.classList.add('active');
+        shirtToggle.classList.add('active');
+        shirtToggle.innerHTML = '<span class="icon">◷</span> artwork';
+        shirtMockup.style.boxShadow = '0 0 80px rgba(201, 168, 76, 0.3), 0 0 160px rgba(201, 168, 76, 0.1)';
+        shirtMockup.style.border = '1px solid rgba(201, 168, 76, 0.15)';
+      } else {
+        // Show artwork, hide mockup
+        imgElement.style.display = 'block';
+        shirtMockup.classList.remove('active');
+        shirtToggle.classList.remove('active');
+        shirtToggle.innerHTML = '<span class="icon">◷</span> apparel';
+        shirtMockup.style.boxShadow = 'none';
+        shirtMockup.style.border = 'none';
+      }
+    }
+
+    // --- MODAL FUNCTIONS ---
+    function openModal() {
+      const work = works[currentIndex];
+      modalWorkName.textContent = work.name;
+      modalWorkNumber.textContent = romanNumerals[currentIndex] || (currentIndex + 1);
+      modalStoryText.textContent = work.story;
+      
+      modalOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // --- event listeners ---
+    controlsBar.addEventListener('click', nextWork);
+    controlsBar.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      nextWork();
+    });
+
+    shirtToggle.addEventListener('click', toggleApparel);
+    shirtToggle.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      toggleApparel();
+    });
+
+    storyBtn.addEventListener('click', openModal);
+    storyBtn.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      openModal();
+    });
+
+    modalClose.addEventListener('click', closeModal);
+    modalClose.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      closeModal();
+    });
+
+    // Close modal on overlay click (click outside content)
+    modalOverlay.addEventListener('click', function(e) {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modalOverlay.classList.contains('open')) {
+        closeModal();
+      }
+    });
+
+    // keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      if (isLoading) return;
+      
+      if (e.key === 'ArrowRight' || e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        nextWork();
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        prevWork();
+      }
+      if (e.key === ' ' || e.key === 'Space') {
+        e.preventDefault();
+        nextWork();
+      }
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        saveImage();
+      }
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        toggleApparel();
+      }
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        if (modalOverlay.classList.contains('open')) {
+          closeModal();
+        } else {
+          openModal();
+        }
+      }
+    });
+
+    // --- init ---
+    function init() {
+      const first = works[0];
+      imgElement.src = first.file;
+      imgElement.alt = first.name;
+      workNameSpan.textContent = first.name;
+      workIndexSpan.textContent = '1 / ' + works.length;
+      
+      // Pre-populate modal
+      modalWorkName.textContent = first.name;
+      modalWorkNumber.textContent = 'I';
+      modalStoryText.textContent = first.story;
+      
+      imgElement.classList.remove('fade');
+      imgElement.style.display = 'block';
+      apparelMode = false;
+      isLoading = false;
+      shirtToggle.classList.remove('active');
+      shirtToggle.innerHTML = '<span class="icon">◷</span> apparel';
+      shirtMockup.classList.remove('active');
+      shirtMockup.style.boxShadow = 'none';
+      shirtMockup.style.border = 'none';
+      loadingSpinner.classList.remove('active');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    window.nextWork = nextWork;
+    window.prevWork = prevWork;
+    window.saveImage = saveImage;
+    window.toggleApparel = toggleApparel;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+  })();
+</script>
+</body>
+</html>
